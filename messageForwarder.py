@@ -13,6 +13,7 @@ phone_number = config.get('Telegram', 'phone_number')
 source_channel_id = int(config.get('Telegram', 'source_channel_id'))
 dest_channel_username = config.get('Telegram', 'dest_channel_username')
 dest_channel_id = int(config.getint('Telegram', 'dest_channel_id'))  # Assuming it's an integer ID like the source
+my_username = config.get('Telegram', 'my_username')
 
 client = TelegramClient('default_session', api_id, api_hash)
 
@@ -26,6 +27,8 @@ async def main():
         for message in past_messages:
             if message.text and message.text.startswith("🔷XAUUSD GOLD"):
                 await client.forward_messages(dest_channel_username, message)
+                # Mark the source channel as unread
+                await client.mark_read(source_channel_id, unread=True)
                 break  # Exit the loop once the message is found and forwarded
     except Exception as e:
         print(f"Error occurred when fetching and forwarding the past message: {e}")
@@ -44,8 +47,13 @@ async def main():
             try:
                 # Forward the incoming message to the destination channel
                 await client.forward_messages(dest_channel_id, event.message)
+                
+                # Mark the source channel as unread
+                await client.mark_read(source_channel_id, unread=True)
+                
             except Exception as e:
                 print(f"Error occurred: {e}")
+
     
     await client.run_until_disconnected()
 

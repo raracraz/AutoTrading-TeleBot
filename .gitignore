@@ -1,3 +1,11 @@
 config.ini
 
 .vscode
+
+default_session.session
+
+default_session.session-journal
+
+myenv
+default_session.session
+*.session

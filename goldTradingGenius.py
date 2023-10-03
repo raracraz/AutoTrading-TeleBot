@@ -1,25 +1,54 @@
+import configparser
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import CallbackContext, MessageHandler, Filters, Updater
+import logging
 
-# Replace YOUR_BOT_TOKEN with the token you received from the BotFather
-updater = Updater("YOUR_BOT_TOKEN")
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Bot has started!')
+# Read the token and your user ID from the config.ini file
+config = configparser.ConfigParser()
+config.read('config.ini')
 
-def forward(update: Update, context: CallbackContext) -> None:
-    # Replace DESTINATION_CHAT_ID with the ID of the chat you want to forward messages to
-    context.bot.send_message(chat_id=DESTINATION_CHAT_ID, text=update.message.text)
+my_username = config.get('Telegram', 'my_username')
+my_user_id = int(config.get('Telegram', 'my_user_id'))  # Add your_user_id to your config file
 
-def main():
-    dispatcher = updater.dispatcher
+token = config.get('TradingBot', 'token')
 
-    dispatcher.add_handler(CommandHandler("start", start))
-    # Replace SOURCE_CHAT_ID with the ID of the chat you want to read messages from
-    dispatcher.add_handler(MessageHandler(Filters.chat(SOURCE_CHAT_ID) & Filters.text & ~Filters.command, forward))
+def handle_message(update: Update, context: CallbackContext) -> None:
 
+    context.bot.send_message(my_user_id, f"Received a new message")
+    
+    # Extract the text from the message
+    if update.message:
+        text = update.message.text
+    else:
+        # Handle other types of updates or simply return
+        return
+    
+    # Check if the message starts with "🔷XAUUSD GOLD"
+    if text.startswith("🔷XAUUSD GOLD"):
+
+        print(f"Received matching message: {text}")
+        
+        # Send a Telegram notification to yourself
+        context.bot.send_message(my_user_id, f"Received a new matching message: {text}")
+        
+        print(f"Received message: {text}")
+        # Additional processing logic can be added here if needed
+
+# Create an updater and pass your bot's token
+updater = Updater(token=token)
+
+# On each message, call the 'handle_message' function
+dp = updater.dispatcher
+dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
+# Start the bot
+try:
     updater.start_polling()
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+    print("Bot started polling...")
+except Exception as e:
+    print(f"Error occurred while starting the bot: {e}")
+    exit(1)
+updater.idle()
