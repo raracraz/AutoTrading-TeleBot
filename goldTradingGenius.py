@@ -2,6 +2,7 @@ import configparser
 from telegram import Update
 from telegram.ext import CallbackContext, MessageHandler, Filters, Updater
 import logging
+import time
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -16,26 +17,24 @@ my_user_id = int(config.get('Telegram', 'my_user_id'))  # Add your_user_id to yo
 token = config.get('TradingBot', 'token')
 
 def handle_message(update: Update, context: CallbackContext) -> None:
+    print(f"Received update: {update}")
+    # Check if the update contains a message object
+    if not update.message:
+        print("Received an update without a message")
+        return
 
+    # Print the received message to the terminal
+    print(f"Received message: {update.message.text}")
+    
     context.bot.send_message(my_user_id, f"Received a new message")
     
     # Extract the text from the message
-    if update.message:
-        text = update.message.text
-    else:
-        # Handle other types of updates or simply return
-        return
+    text = update.message.text
     
-    # Check if the message starts with "🔷XAUUSD GOLD"
     if text.startswith("🔷XAUUSD GOLD"):
-
         print(f"Received matching message: {text}")
-        
-        # Send a Telegram notification to yourself
         context.bot.send_message(my_user_id, f"Received a new matching message: {text}")
-        
-        print(f"Received message: {text}")
-        # Additional processing logic can be added here if needed
+
 
 # Create an updater and pass your bot's token
 updater = Updater(token=token)
@@ -44,11 +43,23 @@ updater = Updater(token=token)
 dp = updater.dispatcher
 dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-# Start the bot
-try:
-    updater.start_polling()
-    print("Bot started polling...")
-except Exception as e:
-    print(f"Error occurred while starting the bot: {e}")
-    exit(1)
+# Start the bot with a retry mechanism
+max_retries = 5
+retry_delay = 5  # Start with a 5-second delay
+
+for retry in range(max_retries):
+    try:
+        updater.start_polling()
+        print("Bot started polling...")
+        break  # If successful, break out of the loop
+    except Exception as e:
+        if retry < max_retries - 1:  # Don't print the last error message, as it will exit after that
+            print(f"Error occurred while starting the bot (Attempt {retry + 1}/{max_retries}): {e}")
+            print(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Double the delay for the next retry
+        else:
+            print(f"Error occurred and max retries reached: {e}")
+            exit(1)
+
 updater.idle()
