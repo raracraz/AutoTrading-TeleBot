@@ -23,7 +23,12 @@ mt5_password = config.get('MetaTrader', 'password')
 mt5_server = config.get('MetaTrader', 'server')
 
 # Initialize MT5 connection with login credentials
-if not mt5.initialize(login=mt5_login, password=mt5_password, server=mt5_server):
+# if not mt5.initialize(login=mt5_login, password=mt5_password, server=mt5_server):
+#     print("initialize() failed, error code =",mt5.last_error())
+#     quit()
+
+# Initialize MT5 connection without login credentials
+if not mt5.initialize():
     print("initialize() failed, error code =",mt5.last_error())
     quit()
 
