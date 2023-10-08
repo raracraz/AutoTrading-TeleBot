@@ -5,5 +5,7 @@ config.ini
 default_session.session-journal
 
 myenv
+
 default_session.session
+
 *.session
