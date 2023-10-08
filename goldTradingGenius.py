@@ -56,6 +56,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         
         # Check for TP targets in order: tp3, tp2, tp1
         tp_target = info.get('tp3') or info.get('tp2') or info.get('tp1')
+        print(f"TP target: {tp_target}")
         
         if tp_target:
             place_market_order(info['symbol'], info['order_type'], 0.03, info['sl'], tp_target)
@@ -77,21 +78,21 @@ def extract_order_info(text: str) -> dict:
     if order_type_match:
         results['order_type'] = order_type_match.group(1).upper()
 
-    # Extract order price. This now handles both formats: "1810/1807" and "180.700"
+    # Extract order price and format to three decimal places
     price_match = re.search(r'(BUY|SELL)\s+([\d\.]+)(?:\/[\d\.]+)?', text, re.IGNORECASE)
     if price_match:
-        results['order_price'] = float(price_match.group(2))
+        results['order_price'] = float(format(float(price_match.group(2)), ".3f"))
 
-    # Extract SL value.
+    # Extract SL value and format to three decimal places
     sl_match = re.search(r'SL\s*([\d\.]+)', text)
     if sl_match:
-        results['sl'] = float(sl_match.group(1))
+        results['sl'] = float(format(float(sl_match.group(1)), ".3f"))
 
-    # Extract TP values.
+    # Extract TP values and format each to three decimal places
     tp_matches = re.findall(r'TP\s*([\d\.]+)', text)
     for index, tp_value in enumerate(tp_matches, start=1):
         key = f"tp{index}"
-        results[key] = float(tp_value)
+        results[key] = float(format(float(tp_value), ".3f"))
 
     return results
 
@@ -147,7 +148,8 @@ def place_market_order(symbol, action, volume, sl, tp):
         "tp": tp,
         "magic": 123456,  # Magic number, can be any identifier you choose
         "comment": "python script open",  # Comment on the order
-        "type_filling": mt5.ORDER_FILLING_RETURN,
+        "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
+        "type_filling": mt5.ORDER_FILLING_IOC,
     }
 
     # Send the request
