@@ -49,7 +49,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     if not text:
         return
     
-    if text.startswith("🔷"):
+    if text.startswith("🔷") or text.startswith("XAUUSD") or text.startswith("GBPJPY"):
         print(f"Received matching message: {text}")
         context.bot.send_message(my_user_id, f"Received a new matching message: {text}")
         info = extract_order_info(text)
@@ -58,7 +58,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         tp_target = info.get('tp3') or info.get('tp2') or info.get('tp1')
         
         if tp_target:
-            place_limit_order(info['symbol'], info['order_type'], 0.01, info['order_price'], info['sl'], tp_target)
+            place_market_order(info['symbol'], info['order_type'], 0.03, info['sl'], tp_target)
         else:
             print("No TP target found!")
         
@@ -68,7 +68,7 @@ def extract_order_info(text: str) -> dict:
     results = {}
 
     # Extract the symbol (e.g., XAUUSD, GBPJPY)
-    symbol_match = re.search(r'🔷(\w+)', text)
+    symbol_match = re.search(r'(\w+)', text)
     if symbol_match:
         results['symbol'] = symbol_match.group(1)
 
@@ -77,54 +77,76 @@ def extract_order_info(text: str) -> dict:
     if order_type_match:
         results['order_type'] = order_type_match.group(1).upper()
 
-    # Extract order price.
-    price_match = re.search(r'(BUY|SELL)\s+(\d+\d+)(?:\/)(\d+\d+)', text, re.IGNORECASE)
+    # Extract order price. This now handles both formats: "1810/1807" and "180.700"
+    price_match = re.search(r'(BUY|SELL)\s+([\d\.]+)(?:\/[\d\.]+)?', text, re.IGNORECASE)
     if price_match:
         results['order_price'] = float(price_match.group(2))
 
     # Extract SL value.
-    sl_match = re.search(r'\s*SL\d*\s*(\d+\d+)', text)
+    sl_match = re.search(r'SL\s*([\d\.]+)', text)
     if sl_match:
         results['sl'] = float(sl_match.group(1))
 
-    
     # Extract TP values.
-    tp_matches = re.findall(r'\s*TP\d*\s*(\d+\d+)', text)
+    tp_matches = re.findall(r'TP\s*([\d\.]+)', text)
     for index, tp_value in enumerate(tp_matches, start=1):
         key = f"tp{index}"
         results[key] = float(tp_value)
 
     return results
 
-def place_limit_order(symbol, action, volume, price, sl, tp):
-    current_price = mt5.symbol_info(symbol).bid  # or .ask, depending on your needs
 
+# def place_limit_order(symbol, action, volume, price, sl, tp):
+#     current_price = mt5.symbol_info(symbol).bid  # or .ask, depending on your needs
+
+#     if action == "BUY":
+#         if price > current_price:  # If the BUY limit is above the current price
+#             order_type = mt5.ORDER_TYPE_BUY_STOP
+#         else:
+#             order_type = mt5.ORDER_TYPE_BUY_LIMIT
+#     elif action == "SELL":
+#         if price < current_price:  # If the SELL limit is below the current price
+#             order_type = mt5.ORDER_TYPE_SELL_STOP
+#         else:
+#             order_type = mt5.ORDER_TYPE_SELL_LIMIT
+#     else:
+#         print(f"Unknown action: {action}")
+#         return
+    
+#     # Create the request
+#     request = {
+#         "action": mt5.TRADE_ACTION_PENDING,
+#         "symbol": symbol,
+#         "volume": volume,
+#         "type": order_type,
+#         "price": price,
+#         "sl": sl,
+#         "tp": tp,
+#         "magic": 123456,  # Magic number, can be any identifier you choose
+#         "comment": "python script open",  # Comment on the order
+#         "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
+#         "type_filling": mt5.ORDER_FILLING_RETURN,
+#     }
+
+def place_market_order(symbol, action, volume, sl, tp):
     if action == "BUY":
-        if price > current_price:  # If the BUY limit is above the current price
-            order_type = mt5.ORDER_TYPE_BUY_STOP
-        else:
-            order_type = mt5.ORDER_TYPE_BUY_LIMIT
+        order_type = mt5.ORDER_TYPE_BUY
     elif action == "SELL":
-        if price < current_price:  # If the SELL limit is below the current price
-            order_type = mt5.ORDER_TYPE_SELL_STOP
-        else:
-            order_type = mt5.ORDER_TYPE_SELL_LIMIT
+        order_type = mt5.ORDER_TYPE_SELL
     else:
         print(f"Unknown action: {action}")
         return
     
     # Create the request
     request = {
-        "action": mt5.TRADE_ACTION_PENDING,
+        "action": mt5.TRADE_ACTION_DEAL,  # This is for immediate execution
         "symbol": symbol,
         "volume": volume,
         "type": order_type,
-        "price": price,
         "sl": sl,
         "tp": tp,
         "magic": 123456,  # Magic number, can be any identifier you choose
         "comment": "python script open",  # Comment on the order
-        "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
         "type_filling": mt5.ORDER_FILLING_RETURN,
     }
 
@@ -142,6 +164,22 @@ def place_limit_order(symbol, action, volume, price, sl, tp):
         return
     print(f"Order successfully placed with ticket {result.order}")
     return result.order
+
+
+#     # Send the request
+#     result = mt5.order_send(request)
+    
+#     if result is None:
+#         print("Failed to send order. No response received.")
+#         error = mt5.last_error()
+#         print("Error in order_send(): ", error)
+#         return
+
+#     if result.retcode != mt5.TRADE_RETCODE_DONE:
+#         print(f"Failed to send order. Error: {result.comment}")
+#         return
+#     print(f"Order successfully placed with ticket {result.order}")
+#     return result.order
 
 
 # Create an updater and pass your bot's token

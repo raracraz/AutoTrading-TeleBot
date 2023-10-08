@@ -25,7 +25,7 @@ async def main():
         past_messages = await client.get_messages(source_channel_id, limit=100)  # Fetching last 100 messages
         # Find and forward the first message that matches the criteria
         for message in past_messages:
-            if message.text and message.text.startswith("🔷XAUUSD GOLD"):
+            if message.text and message.text.startswith("🔷XAUUSD GOLD") or message.text and message.text.startswith("🔷GBPJPY") or message.text and message.text.startswith("GBPJPY") or message.text and message.text.startswith("XAUUSD GOLD"):
                 await client.forward_messages(dest_channel_username, message)
                 # Mark the source channel as unread
                 await client.mark_read(source_channel_id, unread=True)
@@ -41,18 +41,20 @@ async def main():
     
     @client.on(events.NewMessage(chats=source_channel_id))
     async def handler(event):
-        # Check if the message starts with the desired text
-        if event.message.text and event.message.text.startswith("🔷XAUUSD GOLD"):
-            print(event.message)  # Print the incoming message to the console
-            try:
-                # Forward the incoming message to the destination channel
-                await client.forward_messages(dest_channel_id, event.message)
-                
-                # Mark the source channel as unread
-                await client.mark_read(source_channel_id, unread=True)
-                
-            except Exception as e:
-                print(f"Error occurred: {e}")
+        # Check if the message starts with the desired patterns
+        message_text = event.message.text
+        if message_text:
+            if message_text.startswith("🔷XAUUSD GOLD") or message_text.startswith("🔷GBPJPY") or message_text.startswith("GBPJPY") or message_text.startswith("XAUUSD GOLD"):
+                print(event.message)  # Print the incoming message to the console
+                try:
+                    # Forward the incoming message to the destination channel
+                    await client.forward_messages(dest_channel_id, event.message)
+                    
+                    # Mark the source channel as unread
+                    await client.mark_read(source_channel_id, unread=True)
+                    
+                except Exception as e:
+                    print(f"Error occurred: {e}")
 
     
     await client.run_until_disconnected()
