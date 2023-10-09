@@ -1,3 +1,4 @@
+import telegram
 import configparser
 from telegram import Update
 from telegram.ext import CallbackContext, MessageHandler, Filters, Updater
@@ -96,39 +97,6 @@ def extract_order_info(text: str) -> dict:
 
     return results
 
-
-# def place_limit_order(symbol, action, volume, price, sl, tp):
-#     current_price = mt5.symbol_info(symbol).bid  # or .ask, depending on your needs
-
-#     if action == "BUY":
-#         if price > current_price:  # If the BUY limit is above the current price
-#             order_type = mt5.ORDER_TYPE_BUY_STOP
-#         else:
-#             order_type = mt5.ORDER_TYPE_BUY_LIMIT
-#     elif action == "SELL":
-#         if price < current_price:  # If the SELL limit is below the current price
-#             order_type = mt5.ORDER_TYPE_SELL_STOP
-#         else:
-#             order_type = mt5.ORDER_TYPE_SELL_LIMIT
-#     else:
-#         print(f"Unknown action: {action}")
-#         return
-    
-#     # Create the request
-#     request = {
-#         "action": mt5.TRADE_ACTION_PENDING,
-#         "symbol": symbol,
-#         "volume": volume,
-#         "type": order_type,
-#         "price": price,
-#         "sl": sl,
-#         "tp": tp,
-#         "magic": 123456,  # Magic number, can be any identifier you choose
-#         "comment": "python script open",  # Comment on the order
-#         "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
-#         "type_filling": mt5.ORDER_FILLING_RETURN,
-#     }
-
 def place_market_order(symbol, action, volume, sl, tp):
     if action == "BUY":
         order_type = mt5.ORDER_TYPE_BUY
@@ -183,31 +151,35 @@ def place_market_order(symbol, action, volume, sl, tp):
 #     print(f"Order successfully placed with ticket {result.order}")
 #     return result.order
 
+def main():
+    # Create an updater and pass your bot's token
+    updater = Updater(token=token)
 
-# Create an updater and pass your bot's token
-updater = Updater(token=token)
+    # On each message, call the 'handle_message' function
+    dp = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-# On each message, call the 'handle_message' function
-dp = updater.dispatcher
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    # Start the bot with a retry mechanism
+    max_retries = 5
+    retry_delay = 5  # Start with a 5-second delay
 
-# Start the bot with a retry mechanism
-max_retries = 5
-retry_delay = 5  # Start with a 5-second delay
+    for retry in range(max_retries):
+        try:
+            updater.start_polling()
+            print("Bot started polling...")
+            updater.idle()  # This will block until the bot is stopped or Ctrl+C is pressed
+            break  # If successful, break out of the loop
+        except telegram.error.NetworkError:
+            if retry < max_retries - 1:  # Don't print the last error message, as it will exit after that
+                print(f"Network error encountered. Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Double the delay for the next retry
+            else:
+                print("Max retries reached due to network errors.")
+                break
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            break
 
-for retry in range(max_retries):
-    try:
-        updater.start_polling()
-        print("Bot started polling...")
-        break  # If successful, break out of the loop
-    except Exception as e:
-        if retry < max_retries - 1:  # Don't print the last error message, as it will exit after that
-            print(f"Error occurred while starting the bot (Attempt {retry + 1}/{max_retries}): {e}")
-            print(f"Retrying in {retry_delay} seconds...")
-            time.sleep(retry_delay)
-            retry_delay *= 2  # Double the delay for the next retry
-        else:
-            print(f"Error occurred and max retries reached: {e}")
-            exit(1)
-
-updater.idle()
+if __name__ == "__main__":
+    main()
