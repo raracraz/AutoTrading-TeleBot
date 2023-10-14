@@ -1,8 +1,9 @@
 import configparser
 import logging
 from telethon import TelegramClient, events
+import re
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -20,18 +21,9 @@ client = TelegramClient('default_session', api_id, api_hash)
 async def main():
     await client.start(phone_number)
 
-    try:
-        # Fetch the past messages from the source channel
-        past_messages = await client.get_messages(source_channel_id, limit=100)  # Fetching last 100 messages
-        # Find and forward the first message that matches the criteria
-        for message in past_messages:
-            if message.text and message.text.startswith("🔷XAUUSD GOLD") or message.text and message.text.startswith("🔷GBPJPY") or message.text and message.text.startswith("GBPJPY") or message.text and message.text.startswith("XAUUSD GOLD"):
-                await client.forward_messages(dest_channel_username, message)
-                # Mark the source channel as unread
-                await client.mark_read(source_channel_id, unread=True)
-                break  # Exit the loop once the message is found and forwarded
-    except Exception as e:
-        print(f"Error occurred when fetching and forwarding the past message: {e}")
+    print('Client Created...')
+    print('Connecting to Telegram Servers...')
+    print('Done, now forwarding messages...')
 
     try:
         # Send a start message to the destination channel when the bot starts
@@ -44,14 +36,11 @@ async def main():
         # Check if the message starts with the desired patterns
         message_text = event.message.text
         if message_text:
-            if message_text.startswith("🔷XAUUSD GOLD") or message_text.startswith("🔷GBPJPY") or message_text.startswith("GBPJPY") or message_text.startswith("XAUUSD GOLD"):
+            if re.search(r'\s?([A-Z]{6})\s', message_text):
                 print(event.message)  # Print the incoming message to the console
                 try:
                     # Forward the incoming message to the destination channel
                     await client.forward_messages(dest_channel_id, event.message)
-                    
-                    # Mark the source channel as unread
-                    await client.mark_read(source_channel_id, unread=True)
                     
                 except Exception as e:
                     print(f"Error occurred: {e}")

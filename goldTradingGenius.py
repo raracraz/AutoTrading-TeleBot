@@ -7,8 +7,7 @@ import time
 import re
 import MetaTrader5 as mt5
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # Read the token and your user ID from the config.ini file
 config = configparser.ConfigParser()
@@ -23,18 +22,16 @@ mt5_login = int(config.get('MetaTrader', 'login'))
 mt5_password = config.get('MetaTrader', 'password')
 mt5_server = config.get('MetaTrader', 'server')
 
-# Initialize MT5 connection with login credentials
-# if not mt5.initialize(login=mt5_login, password=mt5_password, server=mt5_server):
-#     print("initialize() failed, error code =",mt5.last_error())
-#     quit()
+lot_size = float(config.get('Settings', 'lot_size'))
 
-# Initialize MT5 connection without login credentials
-if not mt5.initialize():
-    print("initialize() failed, error code =",mt5.last_error())
-    quit()
+def initialize_bot():
+    # Initialize MT5 connection without login credentials
+    if not mt5.initialize():
+        print("initialize() failed, error code =",mt5.last_error())
+        quit()
 
-# Now you're connected. You can fetch account information, place trades, etc.
-print(mt5.account_info())
+    # Now you're connected. You can fetch account information, place trades, etc.
+    print(mt5.account_info())
 
 def handle_message(update: Update, context: CallbackContext) -> None:
     text = None
@@ -50,7 +47,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     if not text:
         return
     
-    if text.startswith("🔷") or text.startswith("XAUUSD") or text.startswith("GBPJPY"):
+    if re.search(r'\s?([A-Z]{6})\s', text):
         print(f"Received matching message: {text}")
         context.bot.send_message(my_user_id, f"Received a new matching message: {text}")
         info = extract_order_info(text)
@@ -60,7 +57,8 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         print(f"TP target: {tp_target}")
         
         if tp_target:
-            place_market_order(info['symbol'], info['order_type'], 0.03, info['sl'], tp_target)
+            place_market_order(info['symbol']+'m', info['order_type'], lot_size, float(info['sl']), float(tp_target))
+            print("symbol: ", str(info['symbol']+'m'), "order_type: ", str(info['order_type']), "sl: ", info['sl'], "tp: ", float(tp_target), "lot_size: ", lot_size)
         else:
             print("No TP target found!")
         
@@ -85,12 +83,12 @@ def extract_order_info(text: str) -> dict:
         results['order_price'] = float(format(float(price_match.group(2)), ".3f"))
 
     # Extract SL value and format to three decimal places
-    sl_match = re.search(r'SL\s*([\d\.]+)', text)
+    sl_match = re.search(r'SL\s*:?\s*([\d\.]+)', text, re.IGNORECASE)
     if sl_match:
         results['sl'] = float(format(float(sl_match.group(1)), ".3f"))
 
     # Extract TP values and format each to three decimal places
-    tp_matches = re.findall(r'TP\s*([\d\.]+)', text)
+    tp_matches = re.findall(r'TP\s*:?\s*([\d\.]+)', text, re.IGNORECASE)
     for index, tp_value in enumerate(tp_matches, start=1):
         key = f"tp{index}"
         results[key] = float(format(float(tp_value), ".3f"))
@@ -100,8 +98,10 @@ def extract_order_info(text: str) -> dict:
 def place_market_order(symbol, action, volume, sl, tp):
     if action == "BUY":
         order_type = mt5.ORDER_TYPE_BUY
+        price = mt5.symbol_info_tick(symbol).ask  # Use the ask price for BUY
     elif action == "SELL":
         order_type = mt5.ORDER_TYPE_SELL
+        price = mt5.symbol_info_tick(symbol).bid  # Use the bid price for SELL
     else:
         print(f"Unknown action: {action}")
         return
@@ -112,12 +112,13 @@ def place_market_order(symbol, action, volume, sl, tp):
         "symbol": symbol,
         "volume": volume,
         "type": order_type,
+        "price": price,  # This means the current market price will be used
         "sl": sl,
         "tp": tp,
         "magic": 123456,  # Magic number, can be any identifier you choose
         "comment": "python script open",  # Comment on the order
         "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
-        "type_filling": mt5.ORDER_FILLING_IOC,
+        "type_filling": mt5.ORDER_FILLING_IOC,  # Immediate or Cancelled
     }
 
     # Send the request
@@ -135,51 +136,42 @@ def place_market_order(symbol, action, volume, sl, tp):
     print(f"Order successfully placed with ticket {result.order}")
     return result.order
 
+def run_bot():
+    try:
+        # Create an updater and pass your bot's token
+        updater = Updater(token=token)
 
-#     # Send the request
-#     result = mt5.order_send(request)
+        # On each message, call the 'handle_message' function
+        dp = updater.dispatcher
+        dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+        dp.add_error_handler(error_callback)  # Assuming you have the error_callback from the previous message
+
+        updater.start_polling()
+        print("Bot started polling...")
+        updater.idle()  # This will block until the bot is stopped or Ctrl+C is pressed
+    except telegram.error.NetworkError:
+        print("Network error encountered. Retrying in 10 seconds...")
+        time.sleep(10)
+        run_bot()
+    except Exception as e:
+        print(f"Unexpected error: {e}. Retrying in 10 seconds...")
+        time.sleep(10)
+        run_bot()
+
+def error_callback(update: Update, context: CallbackContext) -> None:
+    """Log the error, send a telegram message to notify the developer, and re-raise the error."""
+    logging.error(msg="Exception while handling an update:", exc_info=context.error)
     
-#     if result is None:
-#         print("Failed to send order. No response received.")
-#         error = mt5.last_error()
-#         print("Error in order_send(): ", error)
-#         return
+    # Send a message to the developer with the error
+    context.bot.send_message(chat_id=my_user_id, text=f"An error occurred: {context.error}")
 
-#     if result.retcode != mt5.TRADE_RETCODE_DONE:
-#         print(f"Failed to send order. Error: {result.comment}")
-#         return
-#     print(f"Order successfully placed with ticket {result.order}")
-#     return result.order
+    # Re-raise the error
+    raise context.error
 
-def main():
-    # Create an updater and pass your bot's token
-    updater = Updater(token=token)
+def gold_trading_main():
+    initialize_bot()
+    run_bot()
 
-    # On each message, call the 'handle_message' function
-    dp = updater.dispatcher
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+if __name__ == '__main__':
+    gold_trading_main()
 
-    # Start the bot with a retry mechanism
-    max_retries = 5
-    retry_delay = 5  # Start with a 5-second delay
-
-    for retry in range(max_retries):
-        try:
-            updater.start_polling()
-            print("Bot started polling...")
-            updater.idle()  # This will block until the bot is stopped or Ctrl+C is pressed
-            break  # If successful, break out of the loop
-        except telegram.error.NetworkError:
-            if retry < max_retries - 1:  # Don't print the last error message, as it will exit after that
-                print(f"Network error encountered. Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Double the delay for the next retry
-            else:
-                print("Max retries reached due to network errors.")
-                break
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            break
-
-if __name__ == "__main__":
-    main()
