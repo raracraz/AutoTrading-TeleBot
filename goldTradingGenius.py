@@ -57,8 +57,8 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         print(f"TP target: {tp_target}")
         
         if tp_target:
-            place_market_order(info['symbol']+'m', info['order_type'], lot_size, float(info['sl']), float(tp_target))
-            print("symbol: ", str(info['symbol']+'m'), "order_type: ", str(info['order_type']), "sl: ", info['sl'], "tp: ", float(tp_target), "lot_size: ", lot_size)
+            place_market_order(info['symbol'], info['order_type'], lot_size, float(info['sl']), float(tp_target))
+            print(f"Placed order for {lot_size} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp_target}")
         else:
             print("No TP target found!")
         
@@ -115,7 +115,7 @@ def place_market_order(symbol, action, volume, sl, tp):
         "price": price,  # This means the current market price will be used
         "sl": sl,
         "tp": tp,
-        "magic": 123456,  # Magic number, can be any identifier you choose
+        "magic": 99999,  # Magic number, can be any identifier you choose
         "comment": "python script open",  # Comment on the order
         "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
         "type_filling": mt5.ORDER_FILLING_IOC,  # Immediate or Cancelled

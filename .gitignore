@@ -9,3 +9,5 @@ myenv
 default_session.session
 
 *.session
+
+*.bak
