@@ -52,17 +52,19 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         context.bot.send_message(my_user_id, f"Received a new matching message: {text}")
         info = extract_order_info(text)
         
-        # Check for TP targets in order: tp3, tp2, tp1
-        tp_target = info.get('tp3') or info.get('tp2') or info.get('tp1')
-        print(f"TP target: {tp_target}")
-        
-        if tp_target:
-            place_market_order(info['symbol'], info['order_type'], lot_size, float(info['sl']), float(tp_target))
-            print(f"Placed order for {lot_size} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp_target}")
-        else:
-            print("No TP target found!")
-        
-        print(info)
+        # Get the list of TP values
+        tp_values = [value for key, value in info.items() if key.startswith("tp")]
+        if not tp_values:
+            print("No TP targets found!")
+            return
+
+        # Calculate the volume per TP
+        volume_per_tp = float(lot_size) / len(tp_values)
+
+        for tp in tp_values:
+            place_market_order(info['symbol']+"m", info['order_type'], float(format(float(volume_per_tp), '.2f')), float(info['sl']), float(tp))
+            print(f"Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
+            context.bot.send_message(my_user_id, f"Placed order for {volume_per_tp} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
 
 def extract_order_info(text: str) -> dict:
     results = {}
@@ -98,10 +100,18 @@ def extract_order_info(text: str) -> dict:
 def place_market_order(symbol, action, volume, sl, tp):
     if action == "BUY":
         order_type = mt5.ORDER_TYPE_BUY
-        price = mt5.symbol_info_tick(symbol).ask  # Use the ask price for BUY
+        tick_info = mt5.symbol_info_tick(symbol)
+        if tick_info is None:
+            print(f"Could not fetch tick data for symbol: {symbol}")
+            return
+        price = tick_info.ask
     elif action == "SELL":
         order_type = mt5.ORDER_TYPE_SELL
-        price = mt5.symbol_info_tick(symbol).bid  # Use the bid price for SELL
+        tick_info = mt5.symbol_info_tick(symbol)
+        if tick_info is None:
+            print(f"Could not fetch tick data for symbol: {symbol}")
+            return
+        price = tick_info.bid
     else:
         print(f"Unknown action: {action}")
         return
@@ -162,8 +172,9 @@ def error_callback(update: Update, context: CallbackContext) -> None:
     """Log the error, send a telegram message to notify the developer, and re-raise the error."""
     logging.error(msg="Exception while handling an update:", exc_info=context.error)
     
-    # Send a message to the developer with the error
-    context.bot.send_message(chat_id=my_user_id, text=f"An error occurred: {context.error}")
+    # Send a message to the developer with the error, except if the error is network error then dont send
+    if not isinstance(context.error, telegram.error.NetworkError):
+        context.bot.send_message(chat_id=my_user_id, text=f"An error occurred: {context.error}")
 
     # Re-raise the error
     raise context.error
