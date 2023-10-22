@@ -61,10 +61,19 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         # Calculate the volume per TP
         volume_per_tp = float(lot_size) / len(tp_values)
 
+        i = 1
+        msg = []
+
         for tp in tp_values:
             place_market_order(info['symbol']+"m", info['order_type'], float(format(float(volume_per_tp), '.2f')), float(info['sl']), float(tp))
             print(f"Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
-            context.bot.send_message(my_user_id, f"Placed order for {volume_per_tp} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
+            # context.bot.send_message(my_user_id, f"Placed order for {volume_per_tp} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
+            # simply send one message with all the TP values appended to it
+            msg.append(f"TP {i}: Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
+            i += 1
+            
+        context.bot.send_message(my_user_id, "\n".join(msg))
+            
 
 def extract_order_info(text: str) -> dict:
     results = {}
