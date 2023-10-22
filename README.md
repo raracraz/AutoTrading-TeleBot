@@ -35,3 +35,6 @@ server = YOUR_MT5_SERVER
 [Settings]
 lot_size = DESIRED_LOT_SIZE
 ```
+
+## Issues
+- The script can currently only handle one lot size value.
