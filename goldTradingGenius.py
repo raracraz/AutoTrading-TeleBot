@@ -18,10 +18,6 @@ my_user_id = int(config.get('Telegram', 'my_user_id'))  # Add your_user_id to yo
 
 token = config.get('TradingBot', 'token')
 
-mt5_login = int(config.get('MetaTrader', 'login'))
-mt5_password = config.get('MetaTrader', 'password')
-mt5_server = config.get('MetaTrader', 'server')
-
 lot_size = float(config.get('Settings', 'lot_size'))
 
 def initialize_bot():
@@ -71,7 +67,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
             # simply send one message with all the TP values appended to it
             msg.append(f"TP {i}: Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
             i += 1
-            
+
         context.bot.send_message(my_user_id, "\n".join(msg))
             
 
