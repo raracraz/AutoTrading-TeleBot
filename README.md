@@ -1,7 +1,7 @@
 # Autotrading Bot
 AutoTrading Bot is an automated trading system that interfaces with MetaTrader 5 (MT5) to execute trades based on signals received via Telegram.
 ```
-[SYMBOL] BUY/SELL [OPEN PRICE]
+[SYMBOL] [BUY/SELL] [OPEN PRICE]
 TP [TP 1 Value]
 TP [TP 2 Value]
 TP [TP 3 Value]
