@@ -16,6 +16,7 @@ SL [SL Value]
 - Supports multiple Take Profit (TP) levels.
 - Graceful error handling and logging capabilities.
 - Automatic retries on network issues.
+- Best used when ran on a cloud server so that it provides 24/7 coverage.
 
 ## Prerequisites
 - Python 3.11 or higher.
