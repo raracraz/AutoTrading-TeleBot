@@ -46,5 +46,8 @@ server = YOUR_MT5_SERVER
 lot_size = DESIRED_LOT_SIZE
 ```
 
+## Architecture Diagram
+https://i.imgur.com/4VOSR45.png
+
 ## Issues
 - The script can currently only handle one lot size value.
