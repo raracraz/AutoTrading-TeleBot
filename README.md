@@ -47,7 +47,7 @@ lot_size = DESIRED_LOT_SIZE
 ```
 
 ## Architecture Diagram
-https://i.imgur.com/4VOSR45.png
+![Tele Trading Bot](https://github.com/raracraz/AutoTrading-TeleBot/assets/88528326/c4f4afc3-f7ba-4f9c-9142-f48b1c746dee)
 
 ## Issues
 - The script can currently only handle one lot size value.
