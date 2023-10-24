@@ -14,42 +14,47 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 my_username = config.get('Telegram', 'my_username')
-my_user_id = int(config.get('Telegram', 'my_user_id'))  # Add your_user_id to your config file
+# Add your_user_id to your config file
+my_user_id = int(config.get('Telegram', 'my_user_id'))
 
 token = config.get('TradingBot', 'token')
 
 lot_size = float(config.get('Settings', 'lot_size'))
 
+
 def initialize_bot():
     # Initialize MT5 connection without login credentials
     if not mt5.initialize():
-        print("initialize() failed, error code =",mt5.last_error())
+        print("initialize() failed, error code =", mt5.last_error())
         quit()
 
     # Now you're connected. You can fetch account information, place trades, etc.
     print(mt5.account_info())
 
+
 def handle_message(update: Update, context: CallbackContext) -> None:
     text = None
-    
+
     # Check if the update contains a regular message
     if update.message:
         text = update.message.text
     # Check if the update contains a channel post
     elif update.channel_post:
         text = update.channel_post.text
-    
+
     # If no text was found, return
     if not text:
         return
-    
+
     if re.search(r'\s?([A-Z]{6})\s', text):
         print(f"Received matching message: {text}")
-        context.bot.send_message(my_user_id, f"Received a new matching message: {text}")
+        context.bot.send_message(
+            my_user_id, f"Received a new matching message: {text}")
         info = extract_order_info(text)
-        
+
         # Get the list of TP values
-        tp_values = [value for key, value in info.items() if key.startswith("tp")]
+        tp_values = [value for key,
+                     value in info.items() if key.startswith("tp")]
         if not tp_values:
             print("No TP targets found!")
             return
@@ -61,15 +66,17 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         msg = []
 
         for tp in tp_values:
-            place_market_order(info['symbol'], info['order_type'], float(format(float(volume_per_tp), '.2f')), float(info['sl']), float(tp))
-            print(f"Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
-            # context.bot.send_message(my_user_id, f"Placed order for {volume_per_tp} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
+            place_market_order(info['symbol'], info['order_type'], float(
+                format(float(volume_per_tp), '.2f')), float(info['sl']), float(tp))
+            print(
+                f"Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
             # simply send one message with all the TP values appended to it
-            msg.append(f"TP {i}: Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
+            msg.append(
+                f"TP {i}: Placed order for {float(format(float(volume_per_tp), '.2f'))} lots of {info['symbol']} at {info['order_type']} {info['order_price']} with SL {info['sl']} and TP {tp}")
             i += 1
 
         context.bot.send_message(my_user_id, "\n".join(msg))
-            
+
 
 def extract_order_info(text: str) -> dict:
     results = {}
@@ -84,8 +91,8 @@ def extract_order_info(text: str) -> dict:
     if order_type_match:
         results['order_type'] = order_type_match.group(1).upper()
 
-    # Extract order price and format to three decimal places
-    price_match = re.search(r'(BUY|SELL)\s+([\d\.]+)(?:\/[\d\.]+)?', text, re.IGNORECASE)
+    # Extract order price and format to three decimal places (including optional NOW)
+    price_match = re.search(r'(BUY|SELL)(?:\s+NOW)?\s+([\d\.]+)(?:\/[\d\.]+)?', text, re.IGNORECASE)
     if price_match:
         results['order_price'] = float(format(float(price_match.group(2)), ".3f"))
 
@@ -101,6 +108,7 @@ def extract_order_info(text: str) -> dict:
         results[key] = float(format(float(tp_value), ".3f"))
 
     return results
+
 
 def place_market_order(symbol, action, volume, sl, tp):
     if action == "BUY":
@@ -120,7 +128,7 @@ def place_market_order(symbol, action, volume, sl, tp):
     else:
         print(f"Unknown action: {action}")
         return
-    
+
     # Create the request
     request = {
         "action": mt5.TRADE_ACTION_DEAL,  # This is for immediate execution
@@ -138,7 +146,7 @@ def place_market_order(symbol, action, volume, sl, tp):
 
     # Send the request
     result = mt5.order_send(request)
-    
+
     if result is None:
         print("Failed to send order. No response received.")
         error = mt5.last_error()
@@ -151,6 +159,7 @@ def place_market_order(symbol, action, volume, sl, tp):
     print(f"Order successfully placed with ticket {result.order}")
     return result.order
 
+
 def run_bot():
     try:
         # Create an updater and pass your bot's token
@@ -158,8 +167,10 @@ def run_bot():
 
         # On each message, call the 'handle_message' function
         dp = updater.dispatcher
-        dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-        dp.add_error_handler(error_callback)  # Assuming you have the error_callback from the previous message
+        dp.add_handler(MessageHandler(Filters.text & ~
+                       Filters.command, handle_message))
+        # Assuming you have the error_callback from the previous message
+        dp.add_error_handler(error_callback)
 
         updater.start_polling()
         print("Bot started polling...")
@@ -173,21 +184,25 @@ def run_bot():
         time.sleep(10)
         run_bot()
 
+
 def error_callback(update: Update, context: CallbackContext) -> None:
     """Log the error, send a telegram message to notify the developer, and re-raise the error."""
-    logging.error(msg="Exception while handling an update:", exc_info=context.error)
-    
+    logging.error(msg="Exception while handling an update:",
+                  exc_info=context.error)
+
     # Send a message to the developer with the error, except if the error is network error then dont send
     if not isinstance(context.error, telegram.error.NetworkError):
-        context.bot.send_message(chat_id=my_user_id, text=f"An error occurred: {context.error}")
+        context.bot.send_message(
+            chat_id=my_user_id, text=f"An error occurred: {context.error}")
 
     # Re-raise the error
     raise context.error
+
 
 def gold_trading_main():
     initialize_bot()
     run_bot()
 
+
 if __name__ == '__main__':
     gold_trading_main()
-
