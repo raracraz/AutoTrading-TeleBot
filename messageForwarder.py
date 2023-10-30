@@ -40,7 +40,9 @@ async def main():
                 print(event.message)  # Print the incoming message to the console
                 try:
                     # Forward the incoming message to the destination channel
-                    await client.forward_messages(dest_channel_id, event.message)
+                    # await client.forward_messages(dest_channel_id, event.message)
+                    # Copy the message and send it to the destination channel
+                    await client.send_message(dest_channel_id, event.message)
                     
                 except Exception as e:
                     print(f"Error occurred: {e}")
