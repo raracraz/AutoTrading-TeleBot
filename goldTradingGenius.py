@@ -102,7 +102,7 @@ def extract_order_info(text: str) -> dict:
         results['sl'] = float(format(float(sl_match.group(1)), ".3f"))
 
     # Extract TP values and format each to three decimal places
-    tp_matches = re.findall(r'TP\s*:?\s*([\d\.]+)', text, re.IGNORECASE)
+    tp_matches = re.findall(r'TP\w?\s*:?\s*([\d\.]+)', text, re.IGNORECASE)
     for index, tp_value in enumerate(tp_matches, start=1):
         key = f"tp{index}"
         results[key] = float(format(float(tp_value), ".3f"))

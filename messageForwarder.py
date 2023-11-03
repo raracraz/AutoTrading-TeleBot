@@ -36,18 +36,17 @@ async def main():
         # Check if the message starts with the desired patterns
         message_text = event.message.text
         if message_text:
-            if re.search(r'\s?([A-Z]{6})\s', message_text):
+            if re.search(r'\s?([A-Z]{6})\s', message_text, re.IGNORECASE):
                 print(event.message)  # Print the incoming message to the console
                 try:
-                    # Forward the incoming message to the destination channel
-                    # await client.forward_messages(dest_channel_id, event.message)
-                    # Copy the message and send it to the destination channel
-                    await client.send_message(dest_channel_id, event.message)
-                    
+                    # Send the message content to the destination channel
+                    if event.message.media:  # If there's media attached
+                        await client.send_message(dest_channel_id, message_text, file=event.message.media)
+                    else:  # If it's just text
+                        await client.send_message(dest_channel_id, message_text)
                 except Exception as e:
                     print(f"Error occurred: {e}")
 
-    
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
