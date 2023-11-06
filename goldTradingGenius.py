@@ -97,13 +97,25 @@ def extract_order_info(text: str) -> dict:
         results['order_price'] = float(format(float(price_match.group(2)), ".3f"))
 
     # Extract SL value and format to three decimal places
-    sl_match = re.search(r'SL\s*:?\s*([\d\.]+)', text, re.IGNORECASE)
+    sl_match = re.search(r'SL\s*:?\s*([\d:,\']+)(?=\D|$)', text, re.IGNORECASE)
     if sl_match:
-        results['sl'] = float(format(float(sl_match.group(1)), ".3f"))
+        sl_value = sl_match.group(1).replace(",", "").replace("'", ".").replace(":", ".")
+        results['sl'] = float(format(float(sl_value), ".3f"))
 
     # Extract TP values and format each to three decimal places
-    tp_matches = re.findall(r'TP\w?\s*:?\s*([\d\.]+)', text, re.IGNORECASE)
+    # Regex pattern to match 'TP' followed by an optional word character, optional whitespace, and a semicolon
+    tpReplacePattern = r'(Tp\d*\s*);'
+    
+    # Replacement function to replace ';' with ':' after 'Tp'
+    def replace_semicolon(match):
+        return match.group(0).replace(';', ':')
+
+    # Use re.sub() to apply the replacement to the entire text
+    updated_text = re.sub(tpReplacePattern, replace_semicolon, text, flags=re.IGNORECASE)
+    
+    tp_matches = re.findall(r'TP\w?\s*:?\s*([\d:,\']+)(?=\D|$)', updated_text, re.IGNORECASE)
     for index, tp_value in enumerate(tp_matches, start=1):
+        tp_value = tp_value.replace(",", "").replace("'", ".").replace(":", ".")
         key = f"tp{index}"
         results[key] = float(format(float(tp_value), ".3f"))
 
@@ -141,7 +153,7 @@ def place_market_order(symbol, action, volume, sl, tp):
         "magic": 99999,  # Magic number, can be any identifier you choose
         "comment": "python script open",  # Comment on the order
         "type_time": mt5.ORDER_TIME_GTC,  # Good Till Cancelled
-        "type_filling": mt5.ORDER_FILLING_IOC,  # Immediate or Cancelled
+        "type_filling": mt5.ORDER_FILLING_IOC,  # Return an error if the order cannot be filled immediately
     }
 
     # Send the request
