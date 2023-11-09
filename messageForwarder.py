@@ -40,10 +40,7 @@ async def main():
                 print(event.message)  # Print the incoming message to the console
                 try:
                     # Send the message content to the destination channel
-                    if event.message.media:  # If there's media attached
-                        await client.send_message(dest_channel_id, message_text, file=event.message.media)
-                    else:  # If it's just text
-                        await client.send_message(dest_channel_id, message_text)
+                    await client.send_message(dest_channel_id, message_text)
                 except Exception as e:
                     print(f"Error occurred: {e}")
 
