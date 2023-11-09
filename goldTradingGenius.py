@@ -53,8 +53,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         info = extract_order_info(text)
 
         # Get the list of TP values
-        tp_values = [value for key,
-                     value in info.items() if key.startswith("tp")]
+        tp_values = [value for key, value in info.items() if key.startswith("tp")]
         if not tp_values:
             print("No TP targets found!")
             return
@@ -170,7 +169,6 @@ def place_market_order(symbol, action, volume, sl, tp):
         return
     print(f"Order successfully placed with ticket {result.order}")
     return result.order
-
 
 def run_bot():
     try:
