@@ -14,7 +14,7 @@ phone_number = config.get('Telegram', 'phone_number')
 source_channel_id = int(config.get('Telegram', 'source_channel_id'))
 dest_channel_username = config.get('Telegram', 'dest_channel_username')
 dest_channel_id = int(config.getint('Telegram', 'dest_channel_id'))  # Assuming it's an integer ID like the source
-my_username = config.get('Telegram', 'my_username')
+
 
 client = TelegramClient('default_session', api_id, api_hash)
 
@@ -33,10 +33,9 @@ async def main():
     
     @client.on(events.NewMessage(chats=source_channel_id))
     async def handler(event):
-        # Check if the message starts with the desired patterns
         message_text = event.message.text
         if message_text:
-            if re.search(r'\s?([A-Z]{6})\s', message_text, re.IGNORECASE):
+            if re.search(r'\s?([A-Z]{6})\s', message_text, re.IGNORECASE) or re.search(r'close half lots', message_text, re.IGNORECASE):
                 print(event.message)  # Print the incoming message to the console
                 try:
                     # Send the message content to the destination channel
